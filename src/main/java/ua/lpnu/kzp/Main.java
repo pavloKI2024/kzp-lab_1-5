@@ -1,12 +1,14 @@
 package ua.lpnu.kzp;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 
 /**
  * Консольна програма «Готель» (варіант 14).
@@ -18,7 +20,6 @@ import java.util.Locale;
  */
 public final class Main {
 
-    private static final String VERSION = "1.0.0";
     private static final String DEFAULT_INPUT = "data/input.csv";
     private static final String DEFAULT_OUTPUT = "output/report.txt";
     private static final int FIELDS = 5;
@@ -43,7 +44,7 @@ public final class Main {
                     return;
                 }
                 case "--version" -> {
-                    System.out.println("lab01 " + VERSION);
+                    System.out.println("lab01 " + readVersion());
                     return;
                 }
                 case "--input" -> {
@@ -71,6 +72,25 @@ public final class Main {
             run(Path.of(input), Path.of(output));
         } catch (IOException e) {
             fail("Помилка вводу/виводу: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Читає версію програми з ресурсу {@code version.properties},
+     * у який Maven підставляє версію з {@code pom.xml}.
+     *
+     * @return версія або {@code unknown}, якщо ресурс недоступний
+     */
+    private static String readVersion() {
+        try (InputStream in = Main.class.getResourceAsStream("/version.properties")) {
+            if (in == null) {
+                return "unknown";
+            }
+            Properties props = new Properties();
+            props.load(in);
+            return props.getProperty("version", "unknown");
+        } catch (IOException e) {
+            return "unknown";
         }
     }
 

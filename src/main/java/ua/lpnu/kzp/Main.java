@@ -1,0 +1,181 @@
+package ua.lpnu.kzp;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Консольна програма «Готель» (варіант 14).
+ *
+ * <p>Читає записи формату {@code room;guest;nights;nightlyRate;category}
+ * з CSV-файлу, пропускає некоректні рядки з поясненням причини та обчислює:
+ * кількість коректних записів, сумарну кількість ночей, загальний виторг
+ * і найдовше проживання.
+ */
+public final class Main {
+
+    private static final String VERSION = "1.0.0";
+    private static final String DEFAULT_INPUT = "data/input.csv";
+    private static final String DEFAULT_OUTPUT = "output/report.txt";
+    private static final int FIELDS = 5;
+
+    private Main() {
+    }
+
+    /**
+     * Точка входу. Підтримує {@code --help}, {@code --version},
+     * {@code --input <шлях>} та {@code --output <шлях>}.
+     *
+     * @param args аргументи командного рядка
+     */
+    public static void main(String[] args) {
+        String input = DEFAULT_INPUT;
+        String output = DEFAULT_OUTPUT;
+
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--help" -> {
+                    printHelp();
+                    return;
+                }
+                case "--version" -> {
+                    System.out.println("lab01 " + VERSION);
+                    return;
+                }
+                case "--input" -> {
+                    if (++i >= args.length) {
+                        fail("Для --input потрібно вказати шлях");
+                        return;
+                    }
+                    input = args[i];
+                }
+                case "--output" -> {
+                    if (++i >= args.length) {
+                        fail("Для --output потрібно вказати шлях");
+                        return;
+                    }
+                    output = args[i];
+                }
+                default -> {
+                    fail("Невідомий аргумент: " + args[i]);
+                    return;
+                }
+            }
+        }
+
+        try {
+            run(Path.of(input), Path.of(output));
+        } catch (IOException e) {
+            fail("Помилка вводу/виводу: " + e.getMessage());
+        }
+    }
+
+    private static void printHelp() {
+        System.out.println("Використання: java -jar lab01.jar [--input <файл>] [--output <файл>]");
+        System.out.println("  --input   вхідний CSV (за замовчуванням " + DEFAULT_INPUT + ")");
+        System.out.println("  --output  файл звіту (за замовчуванням " + DEFAULT_OUTPUT + ")");
+        System.out.println("  --help    показати довідку");
+        System.out.println("  --version показати версію");
+        System.out.println("Формат рядка: room;guest;nights;nightlyRate;category");
+    }
+
+    private static void fail(String message) {
+        System.err.println(message);
+        System.exit(1);
+    }
+
+    /**
+     * Читає файл, обробляє записи та виводить звіт у консоль і файл.
+     *
+     * @param input  шлях до вхідного CSV
+     * @param output шлях до файлу звіту
+     * @throws IOException якщо файл не вдалося прочитати або записати
+     */
+    private static void run(Path input, Path output) throws IOException {
+        List<String> lines = Files.readAllLines(input, StandardCharsets.UTF_8);
+        List<String> messages = new ArrayList<>();
+
+        int count = 0;
+        long totalNights = 0;
+        double revenue = 0;
+        int longestStay = 0;
+        String longestGuest = "";
+
+        for (int i = 0; i < lines.size(); i++) {
+            int lineNo = i + 1;
+            String line = lines.get(i);
+            if (line.isBlank()) {
+                messages.add("Рядок " + lineNo + " пропущено: порожній рядок");
+                continue;
+            }
+
+            String[] f = line.split(";", -1);
+            if (f.length != FIELDS) {
+                messages.add("Рядок " + lineNo + " пропущено: неправильна кількість полів ("
+                        + f.length + " замість " + FIELDS + ")");
+                continue;
+            }
+
+            String guest = f[1].trim();
+            String category = f[4].trim();
+            if (guest.isEmpty() || category.isEmpty()) {
+                messages.add("Рядок " + lineNo + " пропущено: порожнє текстове поле");
+                continue;
+            }
+
+            int room;
+            int nights;
+            double rate;
+            try {
+                room = Integer.parseInt(f[0].trim());
+                nights = Integer.parseInt(f[2].trim());
+                rate = Double.parseDouble(f[3].trim());
+            } catch (NumberFormatException e) {
+                messages.add("Рядок " + lineNo + " пропущено: нечислове значення в числовому полі");
+                continue;
+            }
+
+            if (room <= 0 || nights <= 0 || rate < 0 || Double.isNaN(rate) || Double.isInfinite(rate)) {
+                messages.add("Рядок " + lineNo + " пропущено: недопустиме числове значення");
+                continue;
+            }
+
+            count++;
+            totalNights += nights;
+            revenue += nights * rate;
+            if (nights > longestStay) {
+                longestStay = nights;
+                longestGuest = guest;
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String nl = System.lineSeparator();
+        for (String m : messages) {
+            sb.append(m).append(nl);
+        }
+        sb.append("=== Звіт: Готель ===").append(nl);
+        sb.append("Коректних записів: ").append(count).append(nl);
+        if (count == 0) {
+            sb.append("Коректних записів немає, показники не обчислено").append(nl);
+        } else {
+            sb.append(String.format(Locale.ROOT, "Сумарна кількість ночей: %d%n", totalNights));
+            sb.append(String.format(Locale.ROOT, "Загальний виторг: %.2f%n", revenue));
+            sb.append(String.format(Locale.ROOT, "Найдовше проживання: %d ночей (%s)%n",
+                    longestStay, longestGuest));
+        }
+
+        String report = sb.toString();
+        System.out.print(report);
+
+        Path parent = output.toAbsolutePath().getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        Files.writeString(output, report, StandardCharsets.UTF_8);
+    }
+}

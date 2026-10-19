@@ -97,6 +97,23 @@ public final class Main {
      */
     private static void run(Path input, Path output) throws IOException {
         List<String> lines = Files.readAllLines(input, StandardCharsets.UTF_8);
+        String report = buildReport(lines);
+        System.out.print(report);
+
+        Path parent = output.toAbsolutePath().getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        Files.writeString(output, report, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Перевіряє рядки, обчислює показники та формує текст звіту.
+     *
+     * @param lines рядки вхідного файлу
+     * @return текст звіту разом із повідомленнями про пропущені рядки
+     */
+    static String buildReport(List<String> lines) {
         List<String> messages = new ArrayList<>();
 
         int count = 0;
@@ -169,13 +186,6 @@ public final class Main {
                     longestStay, longestGuest));
         }
 
-        String report = sb.toString();
-        System.out.print(report);
-
-        Path parent = output.toAbsolutePath().getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-        Files.writeString(output, report, StandardCharsets.UTF_8);
+        return sb.toString();
     }
 }

@@ -123,6 +123,15 @@ public abstract sealed class Booking permits StandardBooking, PremiumBooking {
     }
 
     /**
+     * Повертає тариф за ніч.
+     *
+     * @return вартість однієї ночі
+     */
+    public double getNightlyRate() {
+        return nightsRate.nightlyRate();
+    }
+
+    /**
      * Повертає кількість ночей і тариф.
      *
      * @return незмінна пара «ночі — тариф»

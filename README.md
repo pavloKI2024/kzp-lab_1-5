@@ -40,7 +40,8 @@ src/main/java/ua/lpnu/kzp/
 ├── StandardBooking.java — стандартне проживання: ночі × тариф
 ├── PremiumBooking.java  — преміальне проживання: знижка 10% після 10 ночей
 ├── RoomKind.java        — enum виду номера (ECONOMY, STANDARD, LUX)
-└── NightsRate.java      — record «ночі + тариф», обчислення вартості
+├── NightsRate.java      — record «ночі + тариф», обчислення вартості
+└── BookingQueries.java  — запити Stream API до списку бронювань
 ```
 
 Потік даних: CSV-рядок → `Booking.fromCsv` → `List<Booking>` (підтипи `StandardBooking`/`PremiumBooking`) → показники → звіт.
@@ -57,6 +58,23 @@ src/main/java/ua/lpnu/kzp/
 ### RoomKind
 
 `enum` з трьома значеннями: `ECONOMY`, `STANDARD`, `LUX`. Визначається за категорією з CSV без урахування регістру (`fromCategory`); невідома категорія вважається `STANDARD`. `LUX` дає `PremiumBooking`, решта — `StandardBooking`.
+
+### BookingQueries
+
+Запити Stream API до `List<Booking>` без ручних циклів і перевірки підтипу; вхідний список не змінюється:
+
+| Запит | Метод | Операції | Результат |
+|-------|-------|----------|-----------|
+| відбір | `longStays(list, minNights)` | `filter` | `List<Booking>` |
+| перетворення | `roomNumbers(list)` | `map` | `List<Integer>` |
+| групування | `countByRate(list)` | `groupingBy` + `counting` | `Map<Double, Long>` (за зростанням тарифу) |
+| статистика | `nightsStatistics(list)` | `summarizingInt` | `IntSummaryStatistics` |
+| топ-N | `topLongest(list, n)` | `sorted` (ночі спадаючи, потім номер) + `limit` | `List<Booking>` |
+| пошук | `findByRoom(list, room)` | `filter` + `findFirst` | `Optional<Booking>` |
+
+Також `longestStay` (`max`, `Optional`) і `totalRevenue` (`map` + `reduce`) — на них будується звіт у `Main`.
+
+Фільтр «активне на дату» з таблиці варіанта замінено на «проживання від N ночей», бо вхідний CSV (незмінний за вимогою) не містить дат.
 
 ### NightsRate
 
@@ -80,7 +98,7 @@ src/main/java/ua/lpnu/kzp/
 ```
 ./mvnw verify          # збірка і тести (Windows: mvnw.cmd verify)
 ./mvnw package         # jar у target/
-java -jar target/lab01-3.0.1.jar [--input <файл>] [--output <файл>]
+java -jar target/lab01-4.0.0.jar [--input <файл>] [--output <файл>]
 ```
 
 | Аргумент | Опис |

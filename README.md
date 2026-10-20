@@ -122,7 +122,7 @@ src/main/java/ua/lpnu/kzp/
 ```
 ./mvnw verify          # збірка і тести (Windows: mvnw.cmd verify)
 ./mvnw package         # jar у target/
-java -jar target/lab01-5.0.0.jar [--input <файл>] [--output <файл>]
+java -jar target/lab01-5.0.1.jar [--input <файл>] [--output <файл>]
 ```
 
 | Аргумент | Опис |

@@ -6,8 +6,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -145,18 +147,10 @@ public final class Main {
         }
 
         int count = bookings.size();
-        long totalNights = 0;
-        double revenue = 0;
-        int longestStay = 0;
-        String longestGuest = "";
-        for (Booking b : bookings) {
-            totalNights += b.getNights();
-            revenue += b.getRevenue();
-            if (b.getNights() > longestStay) {
-                longestStay = b.getNights();
-                longestGuest = b.getGuest();
-            }
-        }
+        IntSummaryStatistics nights = BookingQueries.nightsStatistics(bookings);
+        long totalNights = nights.getSum();
+        double revenue = BookingQueries.totalRevenue(bookings);
+        Optional<Booking> longest = BookingQueries.longestStay(bookings);
 
         StringBuilder sb = new StringBuilder();
         String nl = System.lineSeparator();
@@ -165,13 +159,13 @@ public final class Main {
         }
         sb.append("=== Звіт: Готель ===").append(nl);
         sb.append("Коректних записів: ").append(count).append(nl);
-        if (count == 0) {
+        if (longest.isEmpty()) {
             sb.append("Коректних записів немає, показники не обчислено").append(nl);
         } else {
             sb.append(String.format(Locale.ROOT, "Сумарна кількість ночей: %d%n", totalNights));
             sb.append(String.format(Locale.ROOT, "Загальний виторг: %.2f%n", revenue));
             sb.append(String.format(Locale.ROOT, "Найдовше проживання: %d ночей (%s)%n",
-                    longestStay, longestGuest));
+                    longest.get().getNights(), longest.get().getGuest()));
         }
 
         return sb.toString();

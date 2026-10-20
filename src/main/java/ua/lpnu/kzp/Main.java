@@ -22,7 +22,6 @@ public final class Main {
 
     private static final String DEFAULT_INPUT = "data/input.csv";
     private static final String DEFAULT_OUTPUT = "output/report.txt";
-    private static final int FIELDS = 5;
 
     private Main() {
     }
@@ -135,58 +134,27 @@ public final class Main {
      */
     static String buildReport(List<String> lines) {
         List<String> messages = new ArrayList<>();
+        List<Booking> bookings = new ArrayList<>();
 
-        int count = 0;
+        for (int i = 0; i < lines.size(); i++) {
+            try {
+                bookings.add(Booking.fromCsv(lines.get(i)));
+            } catch (IllegalArgumentException e) {
+                messages.add("Рядок " + (i + 1) + " пропущено: " + e.getMessage());
+            }
+        }
+
+        int count = bookings.size();
         long totalNights = 0;
         double revenue = 0;
         int longestStay = 0;
         String longestGuest = "";
-
-        for (int i = 0; i < lines.size(); i++) {
-            int lineNo = i + 1;
-            String line = lines.get(i);
-            if (line.isBlank()) {
-                messages.add("Рядок " + lineNo + " пропущено: порожній рядок");
-                continue;
-            }
-
-            String[] f = line.split(";", -1);
-            if (f.length != FIELDS) {
-                messages.add("Рядок " + lineNo + " пропущено: неправильна кількість полів ("
-                        + f.length + " замість " + FIELDS + ")");
-                continue;
-            }
-
-            String guest = f[1].trim();
-            String category = f[4].trim();
-            if (guest.isEmpty() || category.isEmpty()) {
-                messages.add("Рядок " + lineNo + " пропущено: порожнє текстове поле");
-                continue;
-            }
-
-            int room;
-            int nights;
-            double rate;
-            try {
-                room = Integer.parseInt(f[0].trim());
-                nights = Integer.parseInt(f[2].trim());
-                rate = Double.parseDouble(f[3].trim());
-            } catch (NumberFormatException e) {
-                messages.add("Рядок " + lineNo + " пропущено: нечислове значення в числовому полі");
-                continue;
-            }
-
-            if (room <= 0 || nights <= 0 || rate < 0 || Double.isNaN(rate) || Double.isInfinite(rate)) {
-                messages.add("Рядок " + lineNo + " пропущено: недопустиме числове значення");
-                continue;
-            }
-
-            count++;
-            totalNights += nights;
-            revenue += nights * rate;
-            if (nights > longestStay) {
-                longestStay = nights;
-                longestGuest = guest;
+        for (Booking b : bookings) {
+            totalNights += b.getNights();
+            revenue += b.getRevenue();
+            if (b.getNights() > longestStay) {
+                longestStay = b.getNights();
+                longestGuest = b.getGuest();
             }
         }
 

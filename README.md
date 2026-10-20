@@ -68,7 +68,7 @@ src/main/java/ua/lpnu/kzp/
 ```
 ./mvnw verify          # збірка і тести (Windows: mvnw.cmd verify)
 ./mvnw package         # jar у target/
-java -jar target/lab01-1.0.0.jar [--input <файл>] [--output <файл>]
+java -jar target/lab01-2.0.0.jar [--input <файл>] [--output <файл>]
 ```
 
 | Аргумент | Опис |

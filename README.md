@@ -36,15 +36,27 @@ room;guest;nights;nightlyRate;category
 ```
 src/main/java/ua/lpnu/kzp/
 ├── Main.java        — аргументи командного рядка, читання файлу, звіт
-├── Booking.java     — незмінна сутність «проживання»: валідація й fromCsv
-└── NightsRate.java  — record «ночі + тариф», обчислення вартості
+├── Booking.java         — абстрактний (sealed) базовий тип: спільні поля, валідація, fromCsv, equals/hashCode
+├── StandardBooking.java — стандартне проживання: ночі × тариф
+├── PremiumBooking.java  — преміальне проживання: знижка 10% після 10 ночей
+├── RoomKind.java        — enum виду номера (ECONOMY, STANDARD, LUX)
+└── NightsRate.java      — record «ночі + тариф», обчислення вартості
 ```
 
-Потік даних: CSV-рядок → `Booking.fromCsv` → `List<Booking>` → показники → звіт.
+Потік даних: CSV-рядок → `Booking.fromCsv` → `List<Booking>` (підтипи `StandardBooking`/`PremiumBooking`) → показники → звіт.
 
-### Booking
+### Ієрархія Booking
 
-Клас із приватними `final`-полями без сеттерів. Конструктор перевіряє інваріанти, тому некоректний об'єкт не створюється. Статичний фабричний метод `fromCsv(String)` розбирає рядок і кидає `IllegalArgumentException` із причиною. Геттери: `getRoom`, `getGuest`, `getCategory`, `getNights`, `getRevenue`. `toString` форматує числа через `Locale.ROOT`.
+`Booking` — абстрактний `sealed`-клас, який дозволяє лише `StandardBooking` і `PremiumBooking`. Він містить спільні `private final`-поля, конструктор з інваріантами, фабрику `fromCsv(String)`, геттери, `equals`/`hashCode` (за точним типом і всіма полями) та `toString` з `Locale.ROOT`. Абстрактний метод `getRevenue()` реалізують підтипи:
+
+- `StandardBooking` — ночі × тариф;
+- `PremiumBooking` — те саме, але зі знижкою 10%, якщо ночей строго більше 10.
+
+`Main` працює зі `List<Booking>` і викликає `getRevenue()` без перевірки типу об'єкта — це поліморфізм.
+
+### RoomKind
+
+`enum` з трьома значеннями: `ECONOMY`, `STANDARD`, `LUX`. Визначається за категорією з CSV без урахування регістру (`fromCategory`); невідома категорія вважається `STANDARD`. `LUX` дає `PremiumBooking`, решта — `StandardBooking`.
 
 ### NightsRate
 
@@ -59,7 +71,7 @@ src/main/java/ua/lpnu/kzp/
 
 ### Відмінності від попередньої роботи
 
-Раніше розбір і перевірка полів були вбудовані в цикл `Main.buildReport` через індекси масиву й паралельні змінні. Тепер цим займаються `Booking` і `NightsRate`, а `Main` лише збирає `List<Booking>` і рахує показники. Формат CSV, повідомлення про помилки та звіт не змінилися.
+У ЛР2 `Booking` був одним конкретним класом. У ЛР3 він став абстрактним базовим типом, з'явилися підтипи `StandardBooking` і `PremiumBooking`, enum `RoomKind` та узгоджені `equals`/`hashCode`. Формат CSV, повідомлення про помилки та звіт на `data/input.csv` не змінилися.
 
 ## Запуск
 
@@ -68,7 +80,7 @@ src/main/java/ua/lpnu/kzp/
 ```
 ./mvnw verify          # збірка і тести (Windows: mvnw.cmd verify)
 ./mvnw package         # jar у target/
-java -jar target/lab01-2.0.0.jar [--input <файл>] [--output <файл>]
+java -jar target/lab01-3.0.0.jar [--input <файл>] [--output <файл>]
 ```
 
 | Аргумент | Опис |

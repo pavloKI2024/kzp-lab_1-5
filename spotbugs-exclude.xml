@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Booking навмисно кидає виняток у конструкторі: так некоректний об'єкт не створюється.
+     Ієрархія sealed, підтипи final, тому атака через finalize неможлива. -->
+<FindBugsFilter>
+    <Match>
+        <Class name="ua.lpnu.kzp.Booking"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+</FindBugsFilter>

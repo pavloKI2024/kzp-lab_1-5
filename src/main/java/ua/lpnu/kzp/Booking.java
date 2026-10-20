@@ -3,8 +3,11 @@ package ua.lpnu.kzp;
 import java.util.Locale;
 import java.util.Objects;
 
-/** Незмінний запис про проживання гостя в готелі. */
-public final class Booking {
+/**
+ * Базовий тип запису про проживання гостя в готелі.
+ * Містить спільні поля та інваріанти; вартість проживання реалізують підтипи.
+ */
+public abstract sealed class Booking permits StandardBooking, PremiumBooking {
     private static final int FIELDS = 5;
 
     private final int room;
@@ -21,7 +24,7 @@ public final class Booking {
      * @param nightsRate кількість ночей і тариф
      * @throws IllegalArgumentException якщо значення некоректні
      */
-    public Booking(int room, String guest, String category, NightsRate nightsRate) {
+    protected Booking(int room, String guest, String category, NightsRate nightsRate) {
         this.guest = requireText(guest);
         this.category = requireText(category);
         this.nightsRate = Objects.requireNonNull(nightsRate, "Ночі й тариф не можуть бути null");
@@ -35,7 +38,7 @@ public final class Booking {
      * Створює запис із CSV-рядка {@code room;guest;nights;nightlyRate;category}.
      *
      * @param line рядок вхідного файлу
-     * @return створений запис
+     * @return створений запис: {@link PremiumBooking} для преміальних номерів, інакше {@link StandardBooking}
      * @throws IllegalArgumentException якщо структура, число або значення некоректні
      */
     public static Booking fromCsv(String line) {
@@ -56,7 +59,10 @@ public final class Booking {
             int room = Integer.parseInt(f[0].trim());
             int nights = Integer.parseInt(f[2].trim());
             double rate = Double.parseDouble(f[3].trim());
-            return new Booking(room, guest, category, new NightsRate(nights, rate));
+            NightsRate nightsRate = new NightsRate(nights, rate);
+            return RoomKind.fromCategory(category).isPremium()
+                    ? new PremiumBooking(room, guest, category, nightsRate)
+                    : new StandardBooking(room, guest, category, nightsRate);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("нечислове значення в числовому полі", e);
         }
@@ -108,12 +114,54 @@ public final class Booking {
     }
 
     /**
-     * Повертає вартість проживання.
+     * Повертає вид номера за категорією.
      *
-     * @return кількість ночей, помножена на тариф
+     * @return вид номера
      */
-    public double getRevenue() {
-        return nightsRate.revenue();
+    public RoomKind getKind() {
+        return RoomKind.fromCategory(category);
+    }
+
+    /**
+     * Повертає кількість ночей і тариф.
+     *
+     * @return незмінна пара «ночі — тариф»
+     */
+    protected NightsRate getNightsRate() {
+        return nightsRate;
+    }
+
+    /**
+     * Повертає вартість проживання; кожен підтип рахує її по-своєму.
+     *
+     * @return вартість проживання
+     */
+    public abstract double getRevenue();
+
+    /**
+     * Порівнює записи за типом і всіма полями.
+     *
+     * @param o інший об'єкт
+     * @return {@code true}, якщо тип і всі поля збігаються
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Booking other = (Booking) o;
+        return room == other.room
+                && guest.equals(other.guest)
+                && category.equals(other.category)
+                && nightsRate.equals(other.nightsRate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getClass(), room, guest, category, nightsRate);
     }
 
     @Override

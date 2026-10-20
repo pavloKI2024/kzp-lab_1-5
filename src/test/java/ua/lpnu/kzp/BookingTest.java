@@ -12,7 +12,7 @@ class BookingTest {
 
     @Test
     void constructorStoresAllFields() {
-        Booking b = new Booking(101, "Іваненко", "Standard", OK);
+        Booking b = new StandardBooking(101, "Іваненко", "Standard", OK);
 
         assertEquals(101, b.getRoom());
         assertEquals("Іваненко", b.getGuest());
@@ -23,32 +23,32 @@ class BookingTest {
 
     @Test
     void constructorRejectsNullGuest() {
-        assertThrows(NullPointerException.class, () -> new Booking(101, null, "Standard", OK));
+        assertThrows(NullPointerException.class, () -> new StandardBooking(101, null, "Standard", OK));
     }
 
     @Test
     void constructorRejectsBlankGuest() {
-        assertThrows(IllegalArgumentException.class, () -> new Booking(101, "  ", "Standard", OK));
+        assertThrows(IllegalArgumentException.class, () -> new StandardBooking(101, "  ", "Standard", OK));
     }
 
     @Test
     void constructorRejectsBlankCategory() {
-        assertThrows(IllegalArgumentException.class, () -> new Booking(101, "Іваненко", "", OK));
+        assertThrows(IllegalArgumentException.class, () -> new StandardBooking(101, "Іваненко", "", OK));
     }
 
     @Test
     void constructorRejectsZeroRoom() {
-        assertThrows(IllegalArgumentException.class, () -> new Booking(0, "Іваненко", "Standard", OK));
+        assertThrows(IllegalArgumentException.class, () -> new StandardBooking(0, "Іваненко", "Standard", OK));
     }
 
     @Test
     void constructorRejectsNegativeRoom() {
-        assertThrows(IllegalArgumentException.class, () -> new Booking(-1, "Іваненко", "Standard", OK));
+        assertThrows(IllegalArgumentException.class, () -> new StandardBooking(-1, "Іваненко", "Standard", OK));
     }
 
     @Test
     void constructorRejectsNullNightsRate() {
-        assertThrows(NullPointerException.class, () -> new Booking(101, "Іваненко", "Standard", null));
+        assertThrows(NullPointerException.class, () -> new StandardBooking(101, "Іваненко", "Standard", null));
     }
 
     @Test

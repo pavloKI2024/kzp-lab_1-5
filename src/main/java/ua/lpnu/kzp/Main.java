@@ -24,19 +24,23 @@ public final class Main {
 
     private static final String DEFAULT_INPUT = "data/input.csv";
     private static final String DEFAULT_OUTPUT = "output/report.txt";
+    private static final String DEFAULT_EXPORT = "output/records.csv";
 
     private Main() {
     }
 
     /**
      * Точка входу. Підтримує {@code --help}, {@code --version},
-     * {@code --input <шлях>} та {@code --output <шлях>}.
+     * {@code --input <шлях>}, {@code --output <шлях>}, а також імпорт і експорт CSV із датами:
+     * {@code --records <шлях>} та {@code --export <шлях>}.
      *
      * @param args аргументи командного рядка
      */
     public static void main(String[] args) {
         String input = DEFAULT_INPUT;
         String output = DEFAULT_OUTPUT;
+        String records = null;
+        String export = DEFAULT_EXPORT;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -62,6 +66,20 @@ public final class Main {
                     }
                     output = args[i];
                 }
+                case "--records" -> {
+                    if (++i >= args.length) {
+                        fail("Для --records потрібно вказати шлях");
+                        return;
+                    }
+                    records = args[i];
+                }
+                case "--export" -> {
+                    if (++i >= args.length) {
+                        fail("Для --export потрібно вказати шлях");
+                        return;
+                    }
+                    export = args[i];
+                }
                 default -> {
                     fail("Невідомий аргумент: " + args[i]);
                     return;
@@ -71,9 +89,60 @@ public final class Main {
 
         try {
             run(Path.of(input), Path.of(output));
+            if (records != null) {
+                runRecords(Path.of(records), Path.of(export));
+            }
         } catch (IOException e) {
             fail("Помилка вводу/виводу: " + e.getMessage());
+        } catch (DataStorageException e) {
+            Throwable cause = e.getCause();
+            fail(e.getMessage() + (cause == null ? "" : " (причина: " + cause + ")"));
         }
+    }
+
+    /**
+     * Імпортує CSV із датами у сховище та експортує його назад.
+     *
+     * @param records шлях до CSV із заголовком
+     * @param export  шлях для експортованого CSV
+     * @throws DataStorageException якщо файл не прочитано, заголовок чи записи хибні
+     */
+    private static void runRecords(Path records, Path export) throws DataStorageException {
+        Repository<BookingRecord> repository = importRecords(records);
+        CsvExporter.write(export, BookingRecord.class, repository.all());
+        System.out.println("Імпортовано записів: " + repository.all().size());
+        System.out.println("Експортовано в " + export);
+    }
+
+    /**
+     * Читає CSV-файл (UTF-8), перевіряє заголовок і відновлює записи.
+     *
+     * @param path шлях до CSV
+     * @return сховище відновлених записів
+     * @throws DataStorageException якщо файл недоступний, заголовок не збігається або запис хибний
+     */
+    static Repository<BookingRecord> importRecords(Path path) throws DataStorageException {
+        String text;
+        try {
+            text = Files.readString(path, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new DataStorageException("Не вдалося прочитати CSV: " + path, e);
+        }
+        List<List<String>> rows = CsvParser.parseDocument(text);
+        String expected = CsvExporter.header(BookingRecord.class);
+        if (rows.isEmpty() || !String.join(",", rows.get(0).stream().map(CsvExporter::escape).toList())
+                .equals(expected)) {
+            throw new DataStorageException("Очікується заголовок: " + expected);
+        }
+        Repository<BookingRecord> repository = new Repository<>();
+        for (int i = 1; i < rows.size(); i++) {
+            try {
+                repository.add(BookingRecord.fromFields(rows.get(i)));
+            } catch (DataStorageException e) {
+                throw new DataStorageException("Запис " + i + ": " + e.getMessage(), e);
+            }
+        }
+        return repository;
     }
 
     /**
@@ -99,9 +168,21 @@ public final class Main {
         System.out.println("Використання: java -jar lab01.jar [--input <файл>] [--output <файл>]");
         System.out.println("  --input   вхідний CSV (за замовчуванням " + DEFAULT_INPUT + ")");
         System.out.println("  --output  файл звіту (за замовчуванням " + DEFAULT_OUTPUT + ")");
+        System.out.println("  --records CSV із датами (заголовок + записи) для імпорту");
+        System.out.println("  --export  куди експортувати імпортовані записи (за замовчуванням "
+                + DEFAULT_EXPORT + ")");
         System.out.println("  --help    показати довідку");
         System.out.println("  --version показати версію");
         System.out.println("Формат рядка: room;guest;nights;nightlyRate;category");
+        System.out.println("Формат --records: " + recordsHeader());
+    }
+
+    private static String recordsHeader() {
+        try {
+            return CsvExporter.header(BookingRecord.class);
+        } catch (DataStorageException e) {
+            return "невідомий";
+        }
     }
 
     private static void fail(String message) {

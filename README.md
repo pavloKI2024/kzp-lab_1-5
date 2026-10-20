@@ -41,7 +41,13 @@ src/main/java/ua/lpnu/kzp/
 ├── PremiumBooking.java  — преміальне проживання: знижка 10% після 10 ночей
 ├── RoomKind.java        — enum виду номера (ECONOMY, STANDARD, LUX)
 ├── NightsRate.java      — record «ночі + тариф», обчислення вартості
-└── BookingQueries.java  — запити Stream API до списку бронювань
+├── BookingQueries.java  — запити Stream API до списку бронювань
+├── Repository.java      — параметризоване сховище Repository<T>
+├── CsvColumn.java       — анотація назви CSV-стовпця (RUNTIME, FIELD)
+├── CsvExporter.java     — універсальний рефлексивний CSV-експортер
+├── CsvParser.java       — документний CSV-парсер (лапки, коми, переноси рядків)
+├── BookingRecord.java   — плоский запис із датами для CSV (поля з @CsvColumn)
+└── DataStorageException.java — власний checked-виняток із cause
 ```
 
 Потік даних: CSV-рядок → `Booking.fromCsv` → `List<Booking>` (підтипи `StandardBooking`/`PremiumBooking`) → показники → звіт.
@@ -76,6 +82,24 @@ src/main/java/ua/lpnu/kzp/
 
 Фільтр «активне на дату» з таблиці варіанта замінено на «проживання від N ночей», бо вхідний CSV (незмінний за вимогою) не містить дат.
 
+### Сховище, CSV-експорт та імпорт
+
+- `Repository<T>` — `add`, `all()` (незмінний знімок), `find(Predicate<? super T>)`.
+- `@CsvColumn("назва")` над полем задає заголовок стовпця.
+- `CsvExporter` читає рефлексією поля з `@CsvColumn` будь-якого класу (без прив'язки до домену). Порядок стовпців — за іменем поля; значення екрануються (кома, лапка, перенос рядка → лапки, лапки подвоюються); запис у UTF-8 з перезаписом файлу.
+- `CsvParser.parseDocument` читає весь документ і повертає записи, а не фізичні рядки.
+- `BookingRecord` — запис із датами: `номер, гість, заїзд, виїзд, тариф` (у файлі порядок за іменами полів: `заїзд,виїзд,гість,тариф,номер`).
+- Помилки (формат, значення, файл, рефлексія) — `DataStorageException` із `cause`.
+
+Приклад (`data/records.csv`):
+
+```
+заїзд,виїзд,гість,тариф,номер
+2026-10-01,2026-10-04,Іваненко Петро,1200.5,101
+2026-10-02,2026-10-09,"Коваль, Олена",2000.0,102
+2026-10-05,2026-10-07,"Бондар ""Макс"" Максим",850.0,103
+```
+
 ### NightsRate
 
 `record NightsRate(int nights, double nightlyRate)` — незмінне значення з перевіркою в компактному конструкторі та методом `revenue()` (ночі × тариф).
@@ -98,13 +122,15 @@ src/main/java/ua/lpnu/kzp/
 ```
 ./mvnw verify          # збірка і тести (Windows: mvnw.cmd verify)
 ./mvnw package         # jar у target/
-java -jar target/lab01-4.0.0.jar [--input <файл>] [--output <файл>]
+java -jar target/lab01-5.0.0.jar [--input <файл>] [--output <файл>]
 ```
 
 | Аргумент | Опис |
 |----------|------|
 | `--input` | вхідний CSV (за замовчуванням `data/input.csv`) |
 | `--output` | файл звіту (за замовчуванням `output/report.txt`) |
+| `--records` | CSV із датами для імпорту (заголовок + записи) |
+| `--export` | куди експортувати імпортовані записи (за замовчуванням `output/records.csv`) |
 | `--help` | довідка |
 | `--version` | версія програми |
 
